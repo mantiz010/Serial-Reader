@@ -41,15 +41,18 @@ A custom integration that allows you to monitor one or more serial ports in near
 ## Installation
 
 1. **Create the required directories** (if not already present):
+
    - `custom_components/serial_reader/`
    - `www/`
 
 2. **Place the files** into these directories, following the structure shown above.
 
 3. **(Optional) Install `pyserial` manually if needed**:
+
    ```bash
    pip install pyserial
    ```
+
    However, Home Assistant should automatically install it via `manifest.json`.
 
 4. **Restart Home Assistant**.
@@ -94,6 +97,23 @@ http:
 
 ---
 
+## Adding to the Dashboard
+
+To embed the `serial_ports.html` interface directly into your Home Assistant dashboard, use an **iframe card**:
+
+1. Go to your Home Assistant dashboard.
+2. Click the three dots in the top-right corner and select **Edit Dashboard**.
+3. Add a new card and choose **Custom: Iframe**.
+4. Configure the card with the following URL:
+   ```
+   /local/serial_ports.html
+   ```
+5. Save the dashboard changes.
+
+You can now view and interact with the Serial Reader directly from your dashboard.
+
+---
+
 ## API Endpoints
 
 This integration exposes a REST API at `http://<HOME_ASSISTANT>:8123/api/serial_reader`.
@@ -115,6 +135,7 @@ This integration exposes a REST API at `http://<HOME_ASSISTANT>:8123/api/serial_
 ### **POST** `/api/serial_reader`
 
 - **Body (JSON)**:
+
   ```json
   {
     "serial_ports": ["/dev/ttyUSB0"],
@@ -128,46 +149,39 @@ This integration exposes a REST API at `http://<HOME_ASSISTANT>:8123/api/serial_
   - **`command`** (optional): If present, sends it (with a trailing newline) to the first listed port.
 
 - **Response**:
+
   ```json
   {"status": "success", "message": "..."}
   ```
 
 ---
 
-## Optional Sensor
-
-The file `sensor.py` (in `custom_components/serial_reader/`) can create a sensor in Home Assistant that always shows the **latest line of data**. To enable:
-
-1. In `configuration.yaml`:
-   ```yaml
-   sensor:
-     - platform: serial_reader
-   ```
-2. After restart, you get a sensor named **Serial Data** (one per platform instance).
-
-`sensor.py` only tracks the last line in `serial_data`; it’s a simple utility if you prefer an entity-based view inside HA.
-
----
-
 ## Troubleshooting
 
 ### No ports found
+
 Ensure your Home Assistant instance can see the device at the OS level (e.g., `ls /dev/ttyUSB*`). If using Docker, you must map the device (e.g., `--device=/dev/ttyUSB0:/dev/ttyUSB0`).
 
 ### Permission denied
+
 On Linux, add Home Assistant’s user to the `dialout` group:
+
 ```bash
 sudo usermod -a -G dialout homeassistant
 ```
+
 Then restart.
 
 ### Integration not appearing
+
 Double-check folder structure (`custom_components/serial_reader/`) and file spelling.
 
 ### Data slow to appear
+
 The backend polls every 200ms, but the **frontend** fetches data every 1 second by default. You can reduce that value in `serial_ports.html` if you want more frequent UI updates.
 
 ### Send command not working
+
 Check logs for errors or ensure you’re entering a command and the port is active.
 
 ---
