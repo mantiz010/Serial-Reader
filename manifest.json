@@ -1,0 +1,9 @@
+{
+  "domain": "serial_reader",
+  "name": "Serial Reader",
+  "documentation": "https://github.com/mantiz010/Serial-Reader",
+  "dependencies": [],
+  "codeowners": ["@ymantiz010"],
+  "version": "1.0.0",
+  "requirements": ["pyserial"]
+}
