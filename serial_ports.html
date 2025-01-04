@@ -6,9 +6,9 @@
     <title>Serial Port Viewer</title>
     <style>
         :root {
-            --ha-blue: #007bff; /* Home Assistant blue color */
+            --ha-blue: #007bff;
             --ha-light-blue: #e7f3ff;
-            --text-color: #fff; /* White for text on blue background */
+            --text-color: #fff;
         }
 
         body {
@@ -41,7 +41,7 @@
         }
 
         header img {
-            height: 120px; /* Logo size */
+            height: 120px;
             width: auto;
         }
 
@@ -82,8 +82,10 @@
         }
 
         #serial-data {
-            width: 100%;
-            flex: 1;
+            width: 90%;
+            max-width: 1200px;
+            height: 60vh; /* Dynamic vertical height */
+            margin: 0 auto;
             border: 1px solid #ddd;
             border-radius: 5px;
             background-color: #fff;
@@ -100,6 +102,59 @@
             font-size: 14px;
             color: #666;
         }
+
+        @media (max-width: 1200px) {
+            #serial-data {
+                width: 95%;
+                height: 55vh;
+            }
+
+            header h1 {
+                font-size: 32px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            header {
+                height: 120px;
+                flex-direction: column;
+                justify-content: center;
+                text-align: center;
+            }
+
+            header h1 {
+                font-size: 28px;
+            }
+
+            header img {
+                height: 80px;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            #serial-data {
+                width: 100%;
+                height: 50vh;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header h1 {
+                font-size: 24px;
+            }
+
+            select, button, input {
+                font-size: 12px;
+                padding: 8px;
+            }
+
+            #serial-data {
+                height: 45vh;
+            }
+        }
     </style>
     <script>
         let activePort = null;
@@ -107,52 +162,48 @@
         let pollingInterval = null;
         let isPaused = true;
 
-        // Fetch available ports and any existing data
         async function fetchPorts() {
-            const response = await fetch('/api/serial_reader');
-            const data = await response.json();
+            try {
+                const response = await fetch('/api/serial_reader');
+                const data = await response.json();
 
-            const portDropdown = document.getElementById('port-dropdown');
-            const baudDropdown = document.getElementById('baud-dropdown');
-            const dataWindow = document.getElementById('serial-data');
+                const portDropdown = document.getElementById('port-dropdown');
+                const baudDropdown = document.getElementById('baud-dropdown');
+                const dataWindow = document.getElementById('serial-data');
 
-            // 1. Populate USB port dropdown
-            portDropdown.innerHTML = '<option value="">Select a USB Port</option>';
-            data.available_ports.forEach(port => {
-                const option = document.createElement('option');
-                option.value = port;
-                option.textContent = port;
-                portDropdown.appendChild(option);
-            });
+                portDropdown.innerHTML = '<option value="">Select a USB Port</option>';
+                data.available_ports.forEach(port => {
+                    const option = document.createElement('option');
+                    option.value = port;
+                    option.textContent = port;
+                    portDropdown.appendChild(option);
+                });
 
-            // 2. Populate baud rate dropdown
-            const baudRates = [9600, 19200, 38400, 57600, 115200];
-            baudDropdown.innerHTML = '';
-            baudRates.forEach(rate => {
-                const option = document.createElement('option');
-                option.value = rate;
-                option.textContent = `${rate} baud`;
-                if (rate === baudRate) {
-                    option.selected = true;
+                const baudRates = [9600, 19200, 38400, 57600, 115200];
+                baudDropdown.innerHTML = '';
+                baudRates.forEach(rate => {
+                    const option = document.createElement('option');
+                    option.value = rate;
+                    option.textContent = `${rate} baud`;
+                    if (rate === baudRate) option.selected = true;
+                    baudDropdown.appendChild(option);
+                });
+
+                if (data.serial_data.length > 0) {
+                    dataWindow.textContent = data.serial_data.join("\n") + "\n";
+                    dataWindow.scrollTop = dataWindow.scrollHeight;
                 }
-                baudDropdown.appendChild(option);
-            });
-
-            // 3. Display any existing data (now timestamped in each line)
-            if (data.serial_data.length > 0) {
-                dataWindow.textContent = data.serial_data.join("\n") + "\n";
-                dataWindow.scrollTop = dataWindow.scrollHeight;
+            } catch (error) {
+                console.error('Error fetching ports:', error);
             }
         }
 
-        // Start / pause reading
         async function toggleReading() {
             const portDropdown = document.getElementById('port-dropdown');
             const baudDropdown = document.getElementById('baud-dropdown');
             const toggleButton = document.getElementById('toggle-button');
 
             if (isPaused) {
-                // Start reading
                 activePort = portDropdown.value;
                 baudRate = parseInt(baudDropdown.value);
 
@@ -161,7 +212,6 @@
                     return;
                 }
 
-                // Instruct the backend to open this port
                 await fetch('/api/serial_reader', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -171,7 +221,6 @@
                 startPolling();
                 toggleButton.textContent = 'Pause';
             } else {
-                // Pause reading
                 stopPolling();
                 toggleButton.textContent = 'Start';
             }
@@ -179,19 +228,21 @@
             isPaused = !isPaused;
         }
 
-        // Poll for new data (currently every 1 second). Adjust as desired
         function startPolling() {
             const dataWindow = document.getElementById('serial-data');
             if (pollingInterval) clearInterval(pollingInterval);
 
             pollingInterval = setInterval(async () => {
-                const response = await fetch('/api/serial_reader');
-                const data = await response.json();
+                try {
+                    const response = await fetch('/api/serial_reader');
+                    const data = await response.json();
 
-                // Each line in data.serial_data already has a timestamp
-                if (data.serial_data.length > 0) {
-                    dataWindow.textContent = data.serial_data.join("\n") + "\n";
-                    dataWindow.scrollTop = dataWindow.scrollHeight;
+                    if (data.serial_data.length > 0) {
+                        dataWindow.textContent = data.serial_data.join("\n") + "\n";
+                        dataWindow.scrollTop = dataWindow.scrollHeight;
+                    }
+                } catch (error) {
+                    console.error('Error polling data:', error);
                 }
             }, 1000);
         }
@@ -203,7 +254,6 @@
             }
         }
 
-        // Send a command to the current port
         async function sendCommand() {
             const commandInput = document.getElementById('command-input');
             const portDropdown = document.getElementById('port-dropdown');
@@ -219,33 +269,36 @@
                 return;
             }
 
-            const response = await fetch('/api/serial_reader', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ serial_ports: [selectedPort], command }),
-            });
+            try {
+                const response = await fetch('/api/serial_reader', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ serial_ports: [selectedPort], command }),
+                });
 
-            const result = await response.json();
-            if (result.status === "success") {
-                alert(`Command sent: ${command}`);
-            } else {
-                alert(`Error: ${result.message}`);
+                const result = await response.json();
+                if (result.status === "success") {
+                    alert(`Command sent: ${command}`);
+                } else {
+                    alert(`Error: ${result.message}`);
+                }
+
+                commandInput.value = ''; // Clear the input field after sending
+            } catch (error) {
+                console.error('Error sending command:', error);
             }
         }
 
-        // On page load
         document.addEventListener('DOMContentLoaded', fetchPorts);
     </script>
 </head>
 <body>
     <header>
         <h1>Serial Port Viewer</h1>
-        <!-- Make sure serial_reader_logo.png is in /www, so /local/ points to it -->
         <img src="/local/serial_reader_logo.png" alt="Serial Reader Logo">
     </header>
 
     <div class="container">
-        <!-- Connection Controls -->
         <div class="controls">
             <label for="port-dropdown">USB Port:</label>
             <select id="port-dropdown"></select>
@@ -256,14 +309,12 @@
             <button id="toggle-button" onclick="toggleReading()">Start</button>
         </div>
 
-        <!-- Command Controls -->
         <div class="controls">
             <label for="command-input">Command:</label>
             <input id="command-input" type="text" placeholder="Enter command">
             <button onclick="sendCommand()">Send Command</button>
         </div>
 
-        <!-- Data Output -->
         <div id="serial-data"></div>
 
         <footer>
