@@ -63,12 +63,7 @@ After restart, the integration will be available in Home Assistant. The default 
 
 ## Optional YAML Configuration
 
-If you’d like to specify some settings (though this integration primarily works without additional YAML), you could add to `configuration.yaml`:
 
-```yaml
-serial_reader:
-  default_baud_rate: 115200
-  scan_interval: 5  # If you want to override how often data is read, in seconds
 
 http:
   use_x_forwarded_for: true
