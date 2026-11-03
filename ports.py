@@ -14,14 +14,21 @@ def port_name(device, fallback):
     return fallback or device
 
 def list_ports():
+    ports=list(serial.tools.list_ports.comports())
+    serial_counts={}
+    for port in ports:
+        key=(port.vid,port.pid,port.serial_number)
+        serial_counts[key]=serial_counts.get(key,0)+1
     links=[]
     root=Path('/dev/serial/by-id')
     if root.exists():
-        for p in sorted(root.glob('espnow-*')):
+        for p in sorted(root.glob('*')):
             if p.is_symlink() and p.exists():links.append(str(p))
     details=[]
-    for port in serial.tools.list_ports.comports():
-        aliases=[p for p in links if os.path.realpath(p)==os.path.realpath(port.device)]
+    for port in ports:
+        unique=bool(port.serial_number) and serial_counts[(port.vid,port.pid,port.serial_number)]==1
+        aliases=[p for p in links if os.path.realpath(p)==os.path.realpath(port.device) and (not Path(p).name.startswith('usb-') or unique)]
+        aliases.sort(key=lambda p:(Path(p).name.startswith('usb-'),p))
         details.append({'device':port.device,'name':port_name(port.device,port.description),
                         'preferred_path':aliases[0] if aliases else port.device,'aliases':aliases})
     return sorted(details,key=lambda p:p['device'])

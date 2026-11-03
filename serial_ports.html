@@ -157,185 +157,93 @@
         }
     </style>
     <script>
-        let activePort = null;
-        let baudRate = 115200;
-        let pollingInterval = null;
-        let isPaused = true;
-        let namedDevices = [];
-        const portName = path => namedDevices.find(d => d.path === path)?.name || path;
-
-        async function fetchPorts() {
-            try {
-                const response = await fetch('/api/serial_reader');
-                const data = await response.json();
-                document.getElementById('reader-version').textContent = `Backend ${data.version || 'legacy'} · device names enabled`;
-                namedDevices = (data.port_details || []).filter(d => d.preferred_path && d.preferred_path !== d.device)
-                    .map(d => ({name:d.name, path:d.preferred_path, device:d.device}));
-
-                const portDropdown = document.getElementById('port-dropdown');
-                const baudDropdown = document.getElementById('baud-dropdown');
-                const dataWindow = document.getElementById('serial-data');
-
-                portDropdown.innerHTML = '<option value="">Select a USB Port</option>';
-                if (namedDevices.length) {
-                    const group = document.createElement('optgroup');
-                    group.label = 'Named devices detected by Serial Reader';
-                    namedDevices.forEach(device => {
-                        const option = document.createElement('option');
-                        option.value = device.path;
-                        option.textContent = `${device.name} — ${device.device}`;
-                        group.appendChild(option);
-                    });
-                    portDropdown.appendChild(group);
-                }
-                const rawGroup = document.createElement('optgroup');
-                rawGroup.label = 'Detected serial paths';
-                data.available_ports.forEach(port => {
-                    // Each physical device appears once; named devices use stable links.
-                    if (namedDevices.some(device => device.device === port)) return;
-                    const detail = (data.port_details || []).find(device => device.device === port);
-                    const option = document.createElement('option');
-                    option.value = port;
-                    option.textContent = detail?.name && detail.name !== 'n/a'
-                        ? `${detail.name} — ${port}` : port;
-                    rawGroup.appendChild(option);
-                });
-
-                portDropdown.appendChild(rawGroup);
-                portDropdown.onchange = () => {
-                    const device = namedDevices.find(d => d.path === portDropdown.value);
-                    document.getElementById('device-detail').textContent = device
-                        ? `${device.name} · ${device.path} · Uses its saved USB socket`
-                        : portDropdown.value;
-                };
-                const current = data.active_ports?.[0];
-                const currentDetail = data.active_port_details?.[0];
-                document.getElementById('viewer-status').textContent = current
-                    ? `Already open: ${currentDetail?.name || portName(current)} (${current}). Select a port and press Start to change.`
-                    : 'Select a device and press Start. Named links do not depend on ttyUSB numbering.';
-                const baudRates = [9600, 19200, 38400, 57600, 115200];
-                baudDropdown.innerHTML = '';
-                baudRates.forEach(rate => {
-                    const option = document.createElement('option');
-                    option.value = rate;
-                    option.textContent = `${rate} baud`;
-                    if (rate === baudRate) option.selected = true;
-                    baudDropdown.appendChild(option);
-                });
-
-                if (data.serial_data.length > 0) {
-                    dataWindow.textContent = data.serial_data.join("\n") + "\n";
-                    dataWindow.scrollTop = dataWindow.scrollHeight;
-                }
-            } catch (error) {
-                console.error('Error fetching ports:', error);
+        let snapshot = null, displayPaused = false, pending = false, refreshTask = null, apiOnline = false, revision = 0;
+        let selected = '', optionKey = '';
+        const el = id => document.getElementById(id);
+        const details = () => snapshot?.port_details || [];
+        const item = () => details().find(d => d.preferred_path === selected || d.device === selected);
+        const connection = () => (snapshot?.active_port_details || []).find(d => d.path === selected || d.preferred_path === selected || (item() && d.device === item().device));
+        const deviceName = () => item()?.name || connection()?.name || selected || 'device';
+        function render() {
+            const rows = details().map(d => ({value:d.preferred_path, label:`${d.name === 'n/a' ? 'Serial port' : d.name} — ${d.device}`}));
+            for (const d of snapshot?.active_port_details || []) {
+                if (!rows.some(r => r.value === d.preferred_path)) rows.push({value:d.path,label:`${d.name} — connected`});
+            }
+            if (selected && !rows.some(r => r.value === selected)) rows.push({value:selected,label:`Unavailable — ${selected}`});
+            const key = JSON.stringify(rows);
+            if (key !== optionKey) {
+                optionKey = key;el('port-dropdown').replaceChildren(new Option('Select a serial device',''));
+                rows.forEach(r => el('port-dropdown').append(new Option(r.label,r.value)));
+            }
+            el('port-dropdown').value = selected;
+            const active = connection(), busy = item()?.status === 'busy', available = !!item();
+            el('connection-state').textContent = !apiOnline ? 'Connection status unavailable' : active ? `Connected · ${deviceName()} · ${active.baud_rate} baud` : busy ? `Port in use · ${deviceName()}` : `Disconnected${selected ? ' · '+deviceName() : ''}`;
+            el('connection-state').style.color = active ? '#16834a' : busy ? '#b45309' : '#555';
+            const ready = apiOnline && snapshot?.capabilities?.includes('connection_actions');
+            el('connect-button').disabled = pending || !ready || !available || !!active || busy;
+            el('disconnect-button').disabled = pending || !ready || !active;
+            el('send-button').disabled = pending || !ready || !active;
+            el('port-dropdown').disabled = pending;el('baud-dropdown').disabled = pending || !!active;
+            el('device-detail').textContent = selected ? `${item()?.preferred_path || selected}${item()?.last_error ? ' · '+item().last_error : ''}` : '';
+            el('reader-version').textContent = `Backend ${snapshot?.version || 'unavailable'} · Connect / Disconnect controls`;
+            if (apiOnline && !ready) el('viewer-status').textContent = 'Waiting for the updated Serial Reader backend to load.';
+            el('pause-button').textContent = displayPaused ? 'Resume Display' : 'Pause Display';
+            el('pause-button').setAttribute('aria-pressed',String(displayPaused));
+            if (!displayPaused) {
+                const paths = new Set([selected,item()?.device,item()?.preferred_path,active?.path].filter(Boolean));
+                const lines = selected ? (snapshot?.serial_data || []).filter(line => [...paths].some(p => line.includes(']['+p+']'))) : [];
+                el('serial-data').textContent = lines.join('\n');
+                el('serial-data').scrollTop = el('serial-data').scrollHeight;
             }
         }
-
-        async function toggleReading() {
-            const portDropdown = document.getElementById('port-dropdown');
-            const baudDropdown = document.getElementById('baud-dropdown');
-            const toggleButton = document.getElementById('toggle-button');
-
-            if (isPaused) {
-              try {
-                activePort = portDropdown.value;
-                baudRate = parseInt(baudDropdown.value);
-
-                if (!activePort) {
-                    alert('Please select a USB port.');
-                    return;
-                }
-
-                const response = await fetch('/api/serial_reader', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ serial_ports: [activePort], baud_rate: baudRate }),
-                });
-
-                const result = await response.json();
-                if (!response.ok || result.status !== 'success') {
-                    document.getElementById('viewer-status').textContent =
-                        `Could not open ${portName(activePort)}: ${result.message || 'Connection failed'}`;
-                    return;
-                }
-                document.getElementById('viewer-status').textContent = `Reading ${portName(activePort)} · ${activePort}`;
-                startPolling();
-                toggleButton.textContent = 'Pause';
-              } catch (error) {
-                document.getElementById('viewer-status').textContent = `Connection failed: ${error.message}`;
-                return;
-              }
-            } else {
-                stopPolling();
-                toggleButton.textContent = 'Start';
-            }
-
-            isPaused = !isPaused;
-        }
-
-        function startPolling() {
-            const dataWindow = document.getElementById('serial-data');
-            if (pollingInterval) clearInterval(pollingInterval);
-
-            pollingInterval = setInterval(async () => {
+        function refresh(force = false) {
+            if (refreshTask) return force ? refreshTask.then(() => refresh()) : refreshTask;
+            const generation = revision;
+            refreshTask = (async () => {
                 try {
-                    const response = await fetch('/api/serial_reader');
+                    const response = await fetch('/api/serial_reader',{cache:'no-store'});
+                    if (!response.ok) throw Error('Serial Reader API unavailable');
                     const data = await response.json();
-
-                    if (data.serial_data.length > 0) {
-                        dataWindow.textContent = data.serial_data.join("\n") + "\n";
-                        dataWindow.scrollTop = dataWindow.scrollHeight;
-                    }
+                    if (generation !== revision) return;
+                    snapshot = data;apiOnline = true;
+                    if (!selected && snapshot.active_port_details?.length) selected = snapshot.active_port_details[0].preferred_path;
+                    render();
                 } catch (error) {
-                    console.error('Error polling data:', error);
+                    if (generation !== revision) return;
+                    apiOnline = false;el('viewer-status').textContent = error.message;render();
                 }
-            }, 1000);
+            })().finally(() => {refreshTask = null;});
+            return refreshTask;
         }
-
-        function stopPolling() {
-            if (pollingInterval) {
-                clearInterval(pollingInterval);
-                pollingInterval = null;
+        async function action(kind) {
+            if (pending || !selected || !apiOnline) return;
+            const target = connection()?.path || selected;
+            const body = {action:kind,serial_ports:[target]};
+            if (kind === 'connect') body.baud_rate = Number(el('baud-dropdown').value);
+            if (kind === 'command') {
+                body.command = el('command-input').value.trim();
+                if (!body.command) { el('viewer-status').textContent = 'Enter a command first.';return; }
             }
-        }
-
-        async function sendCommand() {
-            const commandInput = document.getElementById('command-input');
-            const portDropdown = document.getElementById('port-dropdown');
-            const command = commandInput.value.trim();
-            const selectedPort = portDropdown.value;
-
-            if (!selectedPort) {
-                alert("Please select a USB port to send the command.");
-                return;
-            }
-            if (!command) {
-                alert("Please enter a command to send.");
-                return;
-            }
-
+            pending = true;revision++;render();el('viewer-status').textContent = 'Sending request…';
             try {
-                const response = await fetch('/api/serial_reader', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ serial_ports: [selectedPort], command }),
-                });
-
+                const response = await fetch('/api/serial_reader',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
                 const result = await response.json();
-                if (result.status === "success") {
-                    alert(`Command sent: ${command}`);
-                } else {
-                    alert(`Error: ${result.message}`);
-                }
-
-                commandInput.value = ''; // Clear the input field after sending
-            } catch (error) {
-                console.error('Error sending command:', error);
-            }
+                if (!response.ok || result.status !== 'success') throw Error(result.message || 'Request failed');
+                el('viewer-status').textContent = `${kind === 'connect' ? 'Connected to' : kind === 'disconnect' ? 'Disconnected from' : 'Command sent to'} ${deviceName()}`;
+                if (kind === 'command') el('command-input').value = '';
+            } catch (error) { el('viewer-status').textContent = error.message; }
+            finally { await refresh(true);pending = false;render(); }
         }
-
-        document.addEventListener('DOMContentLoaded', fetchPorts);
+        document.addEventListener('DOMContentLoaded',() => {
+            el('port-dropdown').onchange = () => {selected = el('port-dropdown').value;render();};
+            el('connect-button').onclick = () => action('connect');
+            el('disconnect-button').onclick = () => action('disconnect');
+            el('send-button').onclick = () => action('command');
+            el('pause-button').onclick = () => {displayPaused = !displayPaused;render();};
+            refresh();window.serialRefresh = setInterval(() => refresh(),1000);
+        });
+        window.addEventListener('pagehide',() => {clearInterval(window.serialRefresh);window.serialRefresh = null;});
+        window.addEventListener('pageshow',() => {if (!window.serialRefresh) {refresh();window.serialRefresh = setInterval(() => refresh(),1000);}});
     </script>
 </head>
 <body>
@@ -352,15 +260,19 @@
             <label for="baud-dropdown">Baud Rate:</label>
             <select id="baud-dropdown"></select>
 
-            <button id="toggle-button" onclick="toggleReading()">Start</button>
+            <button id="connect-button" disabled>Connect</button>
+            <button id="disconnect-button" disabled>Disconnect</button>
+            <button id="pause-button" aria-pressed="false">Pause Display</button>
         </div>
 
         <div class="controls">
             <label for="command-input">Command:</label>
             <input id="command-input" type="text" placeholder="Enter command">
-            <button onclick="sendCommand()">Send Command</button>
+            <button id="send-button" disabled>Send Command</button>
         </div>
 
+        <div id="connection-state" role="status" style="font-weight:bold;margin-bottom:8px">Checking connection…</div>
+        <div style="font-size:12px;margin-bottom:8px">Connect checks visible port owners and exclusive locking. Other apps must honour serial locks. Opening a USB board can reset it.</div>
         <div id="device-detail" style="font-size:13px;margin-bottom:6px;overflow-wrap:anywhere"></div>
         <div id="viewer-status" role="status" style="font-size:13px;margin-bottom:10px;overflow-wrap:anywhere"></div>
         <div id="serial-data"></div>
