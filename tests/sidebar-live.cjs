@@ -21,7 +21,8 @@ const fs=require('fs'),path=require('path'),assert=require('node:assert/strict')
   assert(!options.some(x=>x.value==='/dev/ttyUSB3'||x.value==='/dev/ttyUSB4'),'No duplicate raw entries for named boards');
   assert.match(await frame.locator('#reader-version').innerText(),/Backend 1\.2\.0/);
   await frame.locator('#port-dropdown').selectOption('/dev/serial/by-id/espnow-receiver');
-  assert.match(await frame.locator('#device-detail').innerText(),/ESP-NOW Receiver/);
+  assert.match(await frame.locator('#connection-state').innerText(),/ESP-NOW Receiver/);
+  assert.equal(await frame.locator('#baud-dropdown').inputValue(),'115200');
   assert.equal(await frame.getByRole('button',{name:'Connect',exact:true}).count(),1);
   assert.equal(await frame.getByRole('button',{name:'Disconnect',exact:true}).count(),1);
   const n=mutations.length;await frame.getByRole('button',{name:'Pause Display',exact:true}).click();assert.equal(mutations.length,n);

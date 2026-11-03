@@ -184,6 +184,10 @@
             el('disconnect-button').disabled = pending || !ready || !active;
             el('send-button').disabled = pending || !ready || !active;
             el('port-dropdown').disabled = pending;el('baud-dropdown').disabled = pending || !!active;
+            if (active) {
+                if (![...el('baud-dropdown').options].some(o => Number(o.value) === active.baud_rate)) el('baud-dropdown').append(new Option(`${active.baud_rate} baud`,active.baud_rate));
+                el('baud-dropdown').value = String(active.baud_rate);
+            }
             el('device-detail').textContent = selected ? `${item()?.preferred_path || selected}${item()?.last_error ? ' · '+item().last_error : ''}` : '';
             el('reader-version').textContent = `Backend ${snapshot?.version || 'unavailable'} · Connect / Disconnect controls`;
             if (apiOnline && !ready) el('viewer-status').textContent = 'Waiting for the updated Serial Reader backend to load.';
@@ -258,7 +262,7 @@
             <select id="port-dropdown"></select>
 
             <label for="baud-dropdown">Baud Rate:</label>
-            <select id="baud-dropdown"></select>
+            <select id="baud-dropdown"><option value="9600">9600 baud</option><option value="19200">19200 baud</option><option value="38400">38400 baud</option><option value="57600">57600 baud</option><option value="115200" selected>115200 baud</option></select>
 
             <button id="connect-button" disabled>Connect</button>
             <button id="disconnect-button" disabled>Disconnect</button>
