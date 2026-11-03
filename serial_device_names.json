@@ -1,0 +1,4 @@
+[
+  {"name": "ESP-NOW Receiver", "path": "/dev/serial/by-id/espnow-receiver"},
+  {"name": "ESP-NOW Wi-Fi Master", "path": "/dev/serial/by-id/espnow-wifi-master"}
+]

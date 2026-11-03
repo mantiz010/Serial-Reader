@@ -196,3 +196,9 @@ Feel free to open issues or pull requests in this GitHub repository if you have 
 
 This code is released under the [MIT License](LICENSE).
 
+
+### Named USB devices
+
+The viewer loads optional `/local/serial_device_names.json`. This installation includes ESP-NOW Receiver and ESP-NOW Wi-Fi Master using `/dev/serial/by-id/espnow-receiver` and `/dev/serial/by-id/espnow-wifi-master`. Copy the JSON alongside the HTML into HA's `www` folder. No integration restart is needed for this frontend update.
+
+Named devices are saved choices, not proof of online status: the viewer checks opening on an explicit Start and reports backend failures. Detected raw paths remain available separately. Opening uses the named link rather than a remembered ttyUSB number, so renumbering cannot select the other board. Keep the boards in the hub sockets used by the host's naming rules. Page loading and naming do not open, close or send to a serial port. An existing connection is identified but not changed automatically.

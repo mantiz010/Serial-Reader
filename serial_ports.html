@@ -161,9 +161,26 @@
         let baudRate = 115200;
         let pollingInterval = null;
         let isPaused = true;
+        let namedDevices = [];
+        const portName = path => namedDevices.find(d => d.path === path)?.name || path;
+
+        async function fetchDeviceNames() {
+            try {
+                const response = await fetch('/local/serial_device_names.json', {cache: 'no-store'});
+                if (!response.ok) return;
+                const data = await response.json();
+                if (!Array.isArray(data)) return;
+                const seen = new Set();
+                namedDevices = data.filter(d => d && typeof d.name === 'string' &&
+                    d.name.length <= 100 && typeof d.path === 'string' &&
+                    /^\/dev\/serial\/by-id\/[A-Za-z0-9_.:-]+$/.test(d.path) &&
+                    !seen.has(d.path) && seen.add(d.path));
+            } catch (_) { namedDevices = []; }
+        }
 
         async function fetchPorts() {
             try {
+                await fetchDeviceNames();
                 const response = await fetch('/api/serial_reader');
                 const data = await response.json();
 
@@ -172,13 +189,37 @@
                 const dataWindow = document.getElementById('serial-data');
 
                 portDropdown.innerHTML = '<option value="">Select a USB Port</option>';
+                if (namedDevices.length) {
+                    const group = document.createElement('optgroup');
+                    group.label = 'Named devices — connection checked on Start';
+                    namedDevices.forEach(device => {
+                        const option = document.createElement('option');
+                        option.value = device.path;
+                        option.textContent = device.name;
+                        group.appendChild(option);
+                    });
+                    portDropdown.appendChild(group);
+                }
+                const rawGroup = document.createElement('optgroup');
+                rawGroup.label = 'Detected serial paths';
                 data.available_ports.forEach(port => {
                     const option = document.createElement('option');
                     option.value = port;
                     option.textContent = port;
-                    portDropdown.appendChild(option);
+                    rawGroup.appendChild(option);
                 });
 
+                portDropdown.appendChild(rawGroup);
+                portDropdown.onchange = () => {
+                    const device = namedDevices.find(d => d.path === portDropdown.value);
+                    document.getElementById('device-detail').textContent = device
+                        ? `${device.name} · ${device.path} · Uses its saved USB socket`
+                        : portDropdown.value;
+                };
+                const current = data.active_ports?.[0];
+                document.getElementById('viewer-status').textContent = current
+                    ? `Already open: ${portName(current)} (${current}). Select a port and press Start to change.`
+                    : 'Select a device and press Start. Named links do not depend on ttyUSB numbering.';
                 const baudRates = [9600, 19200, 38400, 57600, 115200];
                 baudDropdown.innerHTML = '';
                 baudRates.forEach(rate => {
@@ -204,6 +245,7 @@
             const toggleButton = document.getElementById('toggle-button');
 
             if (isPaused) {
+              try {
                 activePort = portDropdown.value;
                 baudRate = parseInt(baudDropdown.value);
 
@@ -212,14 +254,25 @@
                     return;
                 }
 
-                await fetch('/api/serial_reader', {
+                const response = await fetch('/api/serial_reader', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ serial_ports: [activePort], baud_rate: baudRate }),
                 });
 
+                const result = await response.json();
+                if (!response.ok || result.status !== 'success') {
+                    document.getElementById('viewer-status').textContent =
+                        `Could not open ${portName(activePort)}: ${result.message || 'Connection failed'}`;
+                    return;
+                }
+                document.getElementById('viewer-status').textContent = `Reading ${portName(activePort)} · ${activePort}`;
                 startPolling();
                 toggleButton.textContent = 'Pause';
+              } catch (error) {
+                document.getElementById('viewer-status').textContent = `Connection failed: ${error.message}`;
+                return;
+              }
             } else {
                 stopPolling();
                 toggleButton.textContent = 'Start';
@@ -315,6 +368,8 @@
             <button onclick="sendCommand()">Send Command</button>
         </div>
 
+        <div id="device-detail" style="font-size:13px;margin-bottom:6px;overflow-wrap:anywhere"></div>
+        <div id="viewer-status" role="status" style="font-size:13px;margin-bottom:10px;overflow-wrap:anywhere"></div>
         <div id="serial-data"></div>
 
         <footer>
