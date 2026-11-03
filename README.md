@@ -92,3 +92,11 @@ node tests/sidebar-live.cjs
 Backend tests use fake serial connections and a Linux virtual terminal for exclusive-lock/owner checks. They cover alias reuse, targeted disconnect, missing/busy ports, failed opens, bounded reads, partial lines, read failure and shutdown cleanup. Browser fixtures cover four stable links after port renumbering, independent connections, display pause and busy failures.
 
 The installation-specific live test opens the actual `/serial-reader` dashboard, checks its versioned iframe and all four device names, selects a device and pauses its display. It never presses Connect, Disconnect or Send. It requires the local Playwright installation and a private HA token outside this repository. No SMS, weather or ESP-NOW USB port is opened during automated verification.
+
+## Dashboard layout
+
+The viewer has a compact branded header, separate connection and console panels, a clearly labelled command target, detected-port/connection counts and an empty-console explanation. Disabled actions are visibly dimmed. Desktop places connection controls beside the console; tablet and phone widths stack them above it and keep the command row accessible.
+
+The iframe reads the surrounding Home Assistant theme colours locally, with system light/dark fallback when opened standalone. It never changes the account theme or sends a theme service call. Console output retains a dark, readable monospace surface in either theme. An API outage shows reconnecting/unknown status and last-seen counts instead of claiming that stale connections are live. Backend actions, serial polling frequency, selected-port targeting and pause/disconnect semantics are unchanged.
+
+Visual verification: `node tests/design-preview.cjs` previews the local HTML inside the real HA sidebar; `node tests/design-preview.cjs --deployed` checks the published page. It covers desktop, tablet and phone sizes, a browser-local dark-theme simulation, console visibility, disabled-state contrast and pause/resume. All serial mutation requests and HA service calls are monitored and must remain absent.
