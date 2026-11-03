@@ -197,8 +197,18 @@ Feel free to open issues or pull requests in this GitHub repository if you have 
 This code is released under the [MIT License](LICENSE).
 
 
-### Named USB devices
+### Earlier page-only naming update (superseded by 1.1.0)
 
 The viewer loads optional `/local/serial_device_names.json`. This installation includes ESP-NOW Receiver and ESP-NOW Wi-Fi Master using `/dev/serial/by-id/espnow-receiver` and `/dev/serial/by-id/espnow-wifi-master`. Copy the JSON alongside the HTML into HA's `www` folder. No integration restart is needed for this frontend update.
 
 Named devices are saved choices, not proof of online status: the viewer checks opening on an explicit Start and reports backend failures. Detected raw paths remain available separately. Opening uses the named link rather than a remembered ttyUSB number, so renumbering cannot select the other board. Keep the boards in the hub sockets used by the host's naming rules. Page loading and naming do not open, close or send to a serial port. An existing connection is identified but not changed automatically.
+
+### Serial Reader 1.1.0 backend naming
+
+The component itself now discovers names from the host udev database and resolves the actual ESP-NOW named links. GET retains `available_ports`, `active_ports` and `serial_data`, adding `version`, `port_details` and `active_port_details`. The viewer uses these live backend details; the earlier `serial_device_names.json` is no longer required by this version.
+
+Named links and raw tty paths are matched by physical device. Selecting another name for an already-open board keeps the existing connection. Duplicate aliases do not open twice; commands resolve to the open connection; a command to a closed port reports an error without opening it. Selecting an unavailable port or failing to open a replacement preserves the existing connection. Serial open/write/close operations run outside the HA event loop. The repository's incorrectly named `__init__.p` has been corrected to `__init__.py`.
+
+Install `api.py`, `ports.py`, `manifest.json` and the existing `__init__.py`, `sensor.py`, `const.py` under `custom_components/serial_reader`, and copy `serial_ports.html` into `www`. Loading the changed Python backend requires one Home Assistant Core restart. A VM/host reboot is unnecessary. After that restart, press Start to reopen the wanted serial connection; no automatic connection or command replay is added. GET `/api/serial_reader` must return `version: 1.1.0` after loading.
+
+Checks: `python3 tests/test_backend.py` (nine API tests with fake serial connections) and `node tests/named-paths.cjs` (browser fixtures, including changed ttyUSB numbering and failed opens). Real discovery was also checked inside the installed HA container without opening a port. Backups: `/home/mantiz010/backups/serial-reader-backend-20261103T043103Z`.

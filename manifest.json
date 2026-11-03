@@ -3,7 +3,11 @@
   "name": "Serial Reader",
   "documentation": "https://github.com/mantiz010/Serial-Reader",
   "dependencies": [],
-  "codeowners": ["@ymantiz010"],
-  "version": "1.0.0",
-  "requirements": ["pyserial"]
+  "codeowners": [
+    "@ymantiz010"
+  ],
+  "version": "1.1.0",
+  "requirements": [
+    "pyserial"
+  ]
 }
