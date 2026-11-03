@@ -168,6 +168,7 @@
             try {
                 const response = await fetch('/api/serial_reader');
                 const data = await response.json();
+                document.getElementById('reader-version').textContent = `Backend ${data.version || 'legacy'} · device names enabled`;
                 namedDevices = (data.port_details || []).filter(d => d.preferred_path && d.preferred_path !== d.device)
                     .map(d => ({name:d.name, path:d.preferred_path, device:d.device}));
 
@@ -190,9 +191,13 @@
                 const rawGroup = document.createElement('optgroup');
                 rawGroup.label = 'Detected serial paths';
                 data.available_ports.forEach(port => {
+                    // Each physical device appears once; named devices use stable links.
+                    if (namedDevices.some(device => device.device === port)) return;
+                    const detail = (data.port_details || []).find(device => device.device === port);
                     const option = document.createElement('option');
                     option.value = port;
-                    option.textContent = port;
+                    option.textContent = detail?.name && detail.name !== 'n/a'
+                        ? `${detail.name} — ${port}` : port;
                     rawGroup.appendChild(option);
                 });
 
@@ -361,7 +366,7 @@
         <div id="serial-data"></div>
 
         <footer>
-            Powered by Home Assistant · Serial Reader Integration
+            Powered by Home Assistant · Serial Reader Integration · <span id="reader-version"></span>
         </footer>
     </div>
 </body>

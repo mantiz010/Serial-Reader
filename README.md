@@ -212,3 +212,9 @@ Named links and raw tty paths are matched by physical device. Selecting another 
 Install `api.py`, `ports.py`, `manifest.json` and the existing `__init__.py`, `sensor.py`, `const.py` under `custom_components/serial_reader`, and copy `serial_ports.html` into `www`. Loading the changed Python backend requires one Home Assistant Core restart. A VM/host reboot is unnecessary. After that restart, press Start to reopen the wanted serial connection; no automatic connection or command replay is added. GET `/api/serial_reader` must return `version: 1.1.0` after loading.
 
 Checks: `python3 tests/test_backend.py` (nine API tests with fake serial connections) and `node tests/named-paths.cjs` (browser fixtures, including changed ttyUSB numbering and failed opens). Real discovery was also checked inside the installed HA container without opening a port. Backups: `/home/mantiz010/backups/serial-reader-backend-20261103T043103Z`.
+
+### Cached sidebar dashboard correction
+
+The user's actual `serial-reader` Lovelace dashboard embedded `/local/serial_ports.html?v=39`, which kept the old viewer cached even after the integration and HTML were updated. HA serves `/local` files with a month-long cache lifetime. Deployment must update the iframe URL to `/local/serial_ports.html?v=<HTML SHA256 prefix>` when the HTML changes; a direct-link test alone does not verify the sidebar dashboard.
+
+The viewer lists each ESP-NOW board once using its named stable link; it no longer also offers an ambiguous duplicate ttyUSB entry. Other detected ports show their backend device descriptions. The footer shows the backend version. Read-only browser validation opens `/serial-reader`, checks its real iframe URL and both labels/values, and confirms that page loading sends no serial POST requests. This correction requires no additional Home Assistant restart.
