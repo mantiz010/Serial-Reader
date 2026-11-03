@@ -16,11 +16,13 @@ const fs=require('fs'),path=require('path'),assert=require('node:assert/strict')
   const options=await frame.locator('#port-dropdown option').evaluateAll(es=>es.map(x=>({label:x.textContent,value:x.value})));
   assert(options.some(x=>x.label==='ESP-NOW Receiver — /dev/ttyUSB3'&&x.value==='/dev/serial/by-id/espnow-receiver'));
   assert(options.some(x=>x.label==='ESP-NOW Wi-Fi Master — /dev/ttyUSB4'&&x.value==='/dev/serial/by-id/espnow-wifi-master'));
+  assert(options.some(x=>x.label==='SMS Text Gateway — /dev/ttyACM0'&&x.value==='/dev/ttyACM0'));
+  assert(options.some(x=>x.label==='Bresser 6-in-1 Weather Receiver — /dev/ttyACM1'&&x.value==='/dev/ttyACM1'));
   assert(!options.some(x=>x.value==='/dev/ttyUSB3'||x.value==='/dev/ttyUSB4'),'No duplicate raw entries for named boards');
   assert.match(await frame.locator('#reader-version').innerText(),/Backend 1\.1\.0/);
   await frame.locator('#port-dropdown').selectOption('/dev/serial/by-id/espnow-receiver');
   assert.match(await frame.locator('#device-detail').innerText(),/ESP-NOW Receiver/);
   fs.mkdirSync('/tmp/serial-reader-proof',{recursive:true});await p.screenshot({path:'/tmp/serial-reader-proof/sidebar.png'});
-  assert.deepEqual(mutations,[]);console.log(JSON.stringify({actualSidebarPassed:true,iframeVersion:digest,namedDeviceChoices:options.filter(x=>x.label.startsWith('ESP-NOW')),noDuplicateRawPorts:true,noSerialActions:true}));
+  assert.deepEqual(mutations,[]);console.log(JSON.stringify({actualSidebarPassed:true,iframeVersion:digest,namedDeviceChoices:options.filter(x=>x.label.startsWith('ESP-NOW')),smsAndWeatherNames:true,noDuplicateRawPorts:true,noSerialActions:true}));
  }finally{await b.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
