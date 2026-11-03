@@ -1,0 +1,6 @@
+# ESP-NOW adapters: identical CH340 USB identities, identified by fixed hub sockets.
+# Keep these boards in the same hub sockets. Existing ttyUSB paths remain available.
+SUBSYSTEM=="tty", ENV{ID_VENDOR_ID}=="1a86", ENV{ID_MODEL_ID}=="7523", ENV{ID_PATH}=="pci-0000:00:1b.0-usb-0:2.4.1.2:1.0", ENV{ID_MODEL}="ESP-NOW_Receiver", ENV{ID_MODEL_FROM_DATABASE}="ESP-NOW Receiver", ENV{ID_MODEL_ENC}="ESP-NOW\x20Receiver", SYMLINK+="espnow-receiver", SYMLINK+="serial/by-id/espnow-receiver"
+SUBSYSTEM=="tty", ENV{ID_VENDOR_ID}=="1a86", ENV{ID_MODEL_ID}=="7523", ENV{ID_PATH}=="pci-0000:00:1b.0-usb-0:2.4.1.3:1.0", ENV{ID_MODEL}="ESP-NOW_WiFi_Master", ENV{ID_MODEL_FROM_DATABASE}="ESP-NOW Wi-Fi Master", ENV{ID_MODEL_ENC}="ESP-NOW\x20Wi-Fi\x20Master", SYMLINK+="espnow-wifi-master", SYMLINK+="serial/by-id/espnow-wifi-master"
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ENV{ID_VENDOR_ID}=="1a86", ENV{ID_MODEL_ID}=="7523", ENV{ID_PATH}=="pci-0000:00:1b.0-usb-0:2.4.1.2", ENV{ID_MODEL}="ESP-NOW_Receiver", ENV{ID_MODEL_FROM_DATABASE}="ESP-NOW Receiver", ENV{ID_MODEL_ENC}="ESP-NOW\x20Receiver"
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ENV{ID_VENDOR_ID}=="1a86", ENV{ID_MODEL_ID}=="7523", ENV{ID_PATH}=="pci-0000:00:1b.0-usb-0:2.4.1.3", ENV{ID_MODEL}="ESP-NOW_WiFi_Master", ENV{ID_MODEL_FROM_DATABASE}="ESP-NOW Wi-Fi Master", ENV{ID_MODEL_ENC}="ESP-NOW\x20Wi-Fi\x20Master"
