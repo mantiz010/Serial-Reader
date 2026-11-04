@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
     <title>Serial Port Viewer</title>
     <style>
         :root{color-scheme:light;--page:#f3f6fa;--surface:#fff;--text:#182c3d;--muted:#62778b;--line:#dde5ee;--accent:#0783d7;--on-accent:#fff;--console:#101c2b;--console-text:#d2e6f3}
@@ -17,16 +17,101 @@
         @media(max-width:850px){.app{padding:14px;gap:12px}.workspace{grid-template-columns:1fr;grid-template-rows:auto minmax(180px,1fr);gap:12px}.connection-panel{padding:15px;overflow:visible}.section-head{margin-bottom:11px}.connection-state{margin-bottom:12px;padding:9px 11px}.connection-fields{display:grid;grid-template-columns:minmax(0,1fr) 140px;gap:12px}.field{margin-bottom:10px}.actions{max-width:330px}.device-detail{margin-top:8px}.safety-note{border:0;padding:0;margin:8px 0 0;font-size:10px}.viewer-status:not(:empty){margin-top:8px;padding:6px 8px}.console-head{padding:11px 14px}.command-bar{padding:11px 14px}.app-footer{font-size:9px}.console-empty{gap:5px}.console-empty svg{width:27px;height:27px}h1{font-size:20px}}
         @media(max-width:480px){.app{padding:10px;gap:10px}.brand-icon{width:38px;height:38px;border-radius:9px}h1{font-size:19px}.health{font-size:10px}.subtitle{font-size:10px}.connection-fields{grid-template-columns:minmax(0,1fr) 112px;gap:8px}.connection-panel{padding:12px}.section-head .eyebrow{font-size:9px}.safety-note{font-size:9px;line-height:1.5}.device-detail{font-size:10px}.console-meta{font-size:10px}.command-row{gap:6px}.command-row button{padding:8px 10px;font-size:12px}.app-footer{align-items:flex-start}.footer-stats{gap:8px}#serial-data{padding:12px;font-size:11px}.app-footer #reader-version{max-width:50%;text-align:right}}
         @media(max-height:650px) and (min-width:851px){.app{padding:12px;gap:10px}.connection-panel{padding:14px}.field{margin-bottom:10px}.section-head{margin-bottom:10px}.connection-state{margin-bottom:12px}.safety-note{margin-top:12px;padding-top:10px}}
+        .app{height:var(--app-height,100dvh)}
+        .connection-fields{display:block}
+        .connection-options{margin:0}
+        .connection-options>summary{display:none}
+        .console-actions{display:flex;align-items:center;gap:7px;flex-shrink:0}
+        .console-title{flex:1}
+        .console-panel{grid-template-columns:minmax(0,1fr)}
+        .console-head,.terminal,.command-bar{min-width:0}
+        .follow-button{font-size:12px;min-height:36px;padding:7px 10px}
+        .follow-button[aria-pressed=true]{color:var(--accent);border-color:var(--accent)}
+        #serial-data{touch-action:pan-y;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+        #command-target{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+        @media(max-width:600px),(max-height:500px){
+            .app{padding:8px;gap:8px}
+            .app-header{gap:9px}.brand-icon{width:34px;height:34px;border-radius:8px}h1{font-size:19px}
+            .health{font-size:11px}.subtitle{font-size:10px}
+            .workspace{gap:8px;grid-template-rows:auto minmax(0,1fr)}
+            .connection-panel{padding:10px;overflow:auto;max-height:46dvh;overscroll-behavior:contain}
+            .connection-panel .section-head{display:none}
+            .connection-state{padding:7px 9px;margin-bottom:9px;font-size:12px}
+            .field{margin-bottom:8px}label{margin-bottom:5px}
+            select,input{font-size:16px;min-height:44px;padding:9px}
+            button{min-height:44px;font-size:13px;padding:8px 10px}
+            .actions{max-width:none}
+            .connection-options>summary{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer;font-size:12px;font-weight:600;color:var(--text);list-style:none;border-top:1px solid var(--line)}
+            .connection-options>summary::-webkit-details-marker{display:none}
+            .connection-options>summary:after{content:'⌄';font-size:19px;margin-left:2px;color:var(--muted)}
+            .connection-options[open]>summary:after{transform:rotate(180deg)}
+            #connection-summary{font-size:11px;font-weight:400;color:var(--muted);margin-left:auto}
+            .connection-options>summary:focus-visible{outline:3px solid var(--accent);outline-offset:-3px;border-radius:7px}
+            .device-detail{font-size:10px;margin-top:9px}
+            .safety-note{font-size:10px;line-height:1.5;margin-bottom:0}
+            .console-head{padding:8px 10px;gap:8px;min-height:61px}
+            .console-head h2{font-size:14px}.console-meta{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+            .pause-button,.follow-button{min-height:44px;font-size:12px;padding:7px 9px}
+            .console-actions{gap:5px}
+            #serial-data{padding:10px;font-size:12px;line-height:1.6}
+            .command-bar{padding:9px 10px}.command-row{gap:7px}
+            .command-bar input{font-size:16px}.command-bar label{flex-wrap:nowrap;align-items:baseline}
+            .command-row button{min-height:44px;font-size:14px;padding:8px 13px}
+            .command-help{display:none}
+            .app-footer{font-size:10px;align-items:center;min-height:15px}
+            .app-footer #reader-version{max-width:42%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        }
+        @media(max-height:500px) and (min-width:601px){
+            .app{grid-template-rows:auto minmax(0,1fr)}
+            .app-footer{display:none}.subtitle{display:none}
+            .workspace{grid-template-columns:minmax(230px,30%) minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+            .connection-panel{max-height:none;min-height:0}
+        }
+        @media(max-width:360px){.subtitle{display:none}.console-head{min-height:55px;padding-top:5px;padding-bottom:5px}}
+        .app.keyboard-open{grid-template-rows:minmax(0,1fr)}
+        .app.keyboard-open .app-header,.app.keyboard-open .connection-panel,.app.keyboard-open .app-footer{display:none}
+        .app.keyboard-open .workspace{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
         @media(prefers-reduced-motion:reduce){button{transition:none}}
     </style>
     <script>
         let snapshot = null, displayPaused = false, pending = false, refreshTask = null, apiOnline = false, revision = 0;
-        let selected = '', optionKey = '';
+        let selected = '', optionKey = '', followOutput = true, updatingOutput = false, lastApiError = '';
+        const compactLayout = window.matchMedia('(max-width:600px), (max-height:500px)');
+        let viewportTargets = [];
         const el = id => document.getElementById(id);
         const details = () => snapshot?.port_details || [];
         const item = () => details().find(d => d.preferred_path === selected || d.device === selected);
         const connection = () => (snapshot?.active_port_details || []).find(d => d.path === selected || d.preferred_path === selected || (item() && d.device === item().device));
         const deviceName = () => item()?.name || connection()?.name || selected || 'device';
+        function syncViewport() {
+            const app = document.querySelector('.app');
+            if (!app) return;
+            let height = window.visualViewport?.height || innerHeight;
+            try {
+                if (parent !== window && parent.location.origin === location.origin && window.frameElement && parent.visualViewport) {
+                    height = Math.min(height,parent.visualViewport.height + parent.visualViewport.offsetTop - window.frameElement.getBoundingClientRect().top);
+                }
+            } catch (_) { /* Standalone or cross-origin frame uses its own viewport. */ }
+            height = Math.max(0,Math.min(innerHeight,height));
+            app.style.setProperty('--app-height',`${height}px`);
+            app.classList.toggle('keyboard-open',compactLayout.matches && document.activeElement === el('command-input') && height < 520);
+        }
+        function startViewport() {
+            if (viewportTargets.length) return;
+            viewportTargets = [window,window.visualViewport].filter(Boolean);
+            try { if (parent !== window && parent.visualViewport) viewportTargets.push(parent.visualViewport); } catch (_) {}
+            viewportTargets = [...new Set(viewportTargets)];
+            viewportTargets.forEach(target => {target.addEventListener('resize',syncViewport);target.addEventListener('scroll',syncViewport);});
+            syncViewport();
+        }
+        function stopViewport() {
+            viewportTargets.forEach(target => {target.removeEventListener('resize',syncViewport);target.removeEventListener('scroll',syncViewport);});
+            viewportTargets = [];
+        }
+        function updateFollowButton() {
+            el('follow-button').textContent = followOutput ? 'Live' : 'Follow live';
+            el('follow-button').setAttribute('aria-pressed',String(followOutput));
+        }
         function syncTheme() {
             let dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
             try {
@@ -56,7 +141,7 @@
             }
             el('port-dropdown').value = selected;
             const active = connection(), busy = item()?.status === 'busy', available = !!item();
-            el('connection-state').textContent = !apiOnline ? 'Connection status unavailable' : active ? `Connected · ${deviceName()} · ${active.baud_rate} baud` : busy ? `Port in use · ${deviceName()}` : `Disconnected${selected ? ' · '+deviceName() : ''}`;
+            el('connection-state').textContent = !apiOnline ? 'Connection status unavailable' : active ? (compactLayout.matches ? `Connected · ${active.baud_rate} baud` : `Connected · ${deviceName()} · ${active.baud_rate} baud`) : busy ? `Port in use · ${deviceName()}` : `Disconnected${selected ? ' · '+deviceName() : ''}`;
             el('connection-state').dataset.state = !apiOnline ? 'unknown' : active ? 'connected' : busy ? 'busy' : 'disconnected';
             const ready = apiOnline && snapshot?.capabilities?.includes('connection_actions');
             el('connect-button').disabled = pending || !ready || !available || !!active || busy;
@@ -68,18 +153,28 @@
                 el('baud-dropdown').value = String(active.baud_rate);
             }
             el('device-detail').textContent = selected ? `${item()?.preferred_path || selected}${item()?.last_error ? ' · '+item().last_error : ''}` : '';
-            el('reader-version').textContent = `Backend ${snapshot?.version || 'unavailable'} · Connect / Disconnect controls`;
+            el('reader-version').textContent = `Backend ${snapshot?.version || 'unavailable'}${compactLayout.matches ? '' : ' · Connect / Disconnect controls'}`;
+            el('connection-summary').textContent = active ? `${active.baud_rate} baud` : 'Baud & connection';
             if (apiOnline && !ready) el('viewer-status').textContent = 'Waiting for the updated Serial Reader backend to load.';
-            el('pause-button').textContent = displayPaused ? 'Resume Display' : 'Pause Display';
+            el('pause-button').textContent = displayPaused ? (compactLayout.matches ? 'Resume' : 'Resume Display') : (compactLayout.matches ? 'Pause' : 'Pause Display');
+            el('pause-button').setAttribute('aria-label',displayPaused ? 'Resume Display' : 'Pause Display');
             el('pause-button').setAttribute('aria-pressed',String(displayPaused));
             if (!displayPaused) {
                 const paths = new Set([selected,item()?.device,item()?.preferred_path,active?.path].filter(Boolean));
                 const lines = selected ? (snapshot?.serial_data || []).filter(line => [...paths].some(p => line.includes(']['+p+']'))) : [];
-                el('serial-data').textContent = lines.join('\n');
-                el('serial-data').scrollTop = el('serial-data').scrollHeight;
+                // The selected device is already named above the console. Keep
+                // its repeated USB path out of the narrow phone log view.
+                const visibleLines = compactLayout.matches ? lines.map(line => line.replace(/^\[(?:\d{4}-\d{2}-\d{2} )?([^\]]+)\]\[[^\]]+\]\s?/, '[$1] ')) : lines;
+                const output = el('serial-data'), text = visibleLines.join('\n'), previousTop = output.scrollTop;
+                if (output.textContent !== text) {
+                    updatingOutput = true;
+                    output.textContent = text;
+                    output.scrollTop = followOutput ? output.scrollHeight : previousTop;
+                    requestAnimationFrame(() => {updatingOutput = false;});
+                }
             }
             el('api-health').dataset.online = String(apiOnline);
-            el('health-label').textContent = apiOnline ? 'Home Assistant online' : 'Reconnecting';
+            el('health-label').textContent = apiOnline ? (compactLayout.matches ? 'Online' : 'Home Assistant online') : 'Reconnecting';
             el('port-count').textContent = `${details().length} ports ${apiOnline ? 'detected' : 'last seen'}`;
             el('session-count').textContent = apiOnline ? `${snapshot?.active_ports?.length || 0} connected` : 'Status unavailable';
             el('console-meta').textContent = displayPaused ? 'Display paused · connection status still updates' : !apiOnline ? 'Last received output · reconnecting' : active ? `Listening to ${deviceName()}` : selected ? `${deviceName()} · disconnected` : 'Select a device to view its output';
@@ -87,24 +182,27 @@
             el('console-empty').hidden = !!el('serial-data').textContent;
             el('empty-title').textContent = displayPaused ? 'Display paused' : !apiOnline ? 'Connection unavailable' : active ? 'Waiting for device output' : 'Your console is ready';
             el('empty-help').textContent = displayPaused ? 'Resume the display to see the latest received lines.' : active ? 'New serial lines will appear here as the device sends them.' : 'Choose a device and connect to see its serial output here.';
+            updateFollowButton();
         }
         function refresh(force = false) {
             syncTheme();
             if (refreshTask) return force ? refreshTask.then(() => refresh()) : refreshTask;
             const generation = revision;
             refreshTask = (async () => {
+                const controller = new AbortController(), timeout = setTimeout(() => controller.abort(),8000);
                 try {
-                    const response = await fetch('/api/serial_reader',{cache:'no-store'});
+                    const response = await fetch('/api/serial_reader',{cache:'no-store',signal:controller.signal});
                     if (!response.ok) throw Error('Serial Reader API unavailable');
                     const data = await response.json();
                     if (generation !== revision) return;
-                    snapshot = data;apiOnline = true;
+                    if (lastApiError && el('viewer-status').textContent === lastApiError) el('viewer-status').textContent = '';
+                    lastApiError = '';snapshot = data;apiOnline = true;
                     if (!selected && snapshot.active_port_details?.length) selected = snapshot.active_port_details[0].preferred_path;
                     render();
                 } catch (error) {
                     if (generation !== revision) return;
-                    apiOnline = false;el('viewer-status').textContent = error.message;render();
-                }
+                    apiOnline = false;lastApiError = error.name === 'AbortError' ? 'Connection timed out. Reconnecting…' : error.message;el('viewer-status').textContent = lastApiError;render();
+                } finally {clearTimeout(timeout);}
             })().finally(() => {refreshTask = null;});
             return refreshTask;
         }
@@ -128,15 +226,31 @@
             finally { await refresh(true);pending = false;render(); }
         }
         document.addEventListener('DOMContentLoaded',() => {
-            el('port-dropdown').onchange = () => {selected = el('port-dropdown').value;render();};
+            el('connection-options').open = !compactLayout.matches;
+            compactLayout.addEventListener('change',() => {el('connection-options').open = !compactLayout.matches;syncViewport();render();});
+            el('port-dropdown').onchange = () => {selected = el('port-dropdown').value;followOutput = true;render();};
             el('connect-button').onclick = () => action('connect');
             el('disconnect-button').onclick = () => action('disconnect');
             el('send-button').onclick = () => action('command');
             el('pause-button').onclick = () => {displayPaused = !displayPaused;render();};
+            el('follow-button').onclick = () => {followOutput = true;el('serial-data').scrollTop = el('serial-data').scrollHeight;updateFollowButton();};
+            el('serial-data').addEventListener('scroll',() => {
+                if (updatingOutput) return;
+                const output = el('serial-data');
+                followOutput = output.scrollHeight - output.scrollTop - output.clientHeight < 24;
+                updateFollowButton();
+            },{passive:true});
+            el('command-input').addEventListener('focus',syncViewport);
+            el('command-input').addEventListener('blur',syncViewport);
+            startViewport();
             refresh();window.serialRefresh = setInterval(() => refresh(),1000);
         });
-        window.addEventListener('pagehide',() => {clearInterval(window.serialRefresh);window.serialRefresh = null;});
-        window.addEventListener('pageshow',() => {if (!window.serialRefresh) {refresh();window.serialRefresh = setInterval(() => refresh(),1000);}});
+        window.addEventListener('pagehide',() => {clearInterval(window.serialRefresh);window.serialRefresh = null;stopViewport();});
+        window.addEventListener('pageshow',() => {startViewport();if (!window.serialRefresh) {refresh();window.serialRefresh = setInterval(() => refresh(),1000);}});
+        document.addEventListener('visibilitychange',() => {
+            if (document.hidden) {clearInterval(window.serialRefresh);window.serialRefresh = null;}
+            else {syncViewport();refresh();if (!window.serialRefresh) window.serialRefresh = setInterval(() => refresh(),1000);}
+        });
     </script>
 </head>
 <body>
@@ -152,17 +266,22 @@
                 <div id="connection-state" class="connection-state" role="status">Checking connection…</div>
                 <div class="connection-fields">
                     <div class="field"><label for="port-dropdown">Device</label><select id="port-dropdown"></select></div>
-                    <div class="field"><label for="baud-dropdown">Baud rate</label><select id="baud-dropdown"><option value="9600">9600</option><option value="19200">19200</option><option value="38400">38400</option><option value="57600">57600</option><option value="115200" selected>115200</option></select></div>
                 </div>
-                <div class="actions"><button id="connect-button" class="primary" disabled>Connect</button><button id="disconnect-button" class="disconnect" disabled>Disconnect</button></div>
-                <div id="device-detail" class="device-detail"></div>
+                <details id="connection-options" class="connection-options" open>
+                    <summary><span>Connection settings</span><span id="connection-summary">Baud &amp; connection</span></summary>
+                    <div class="settings-body">
+                        <div class="field"><label for="baud-dropdown">Baud rate</label><select id="baud-dropdown"><option value="9600">9600</option><option value="19200">19200</option><option value="38400">38400</option><option value="57600">57600</option><option value="115200" selected>115200</option></select></div>
+                        <div class="actions"><button id="connect-button" class="primary" disabled>Connect</button><button id="disconnect-button" class="disconnect" disabled>Disconnect</button></div>
+                        <div id="device-detail" class="device-detail"></div>
+                        <p class="helper safety-note">Connect checks for other readers and requests an exclusive lock. Apps that ignore locks may not be detected. Opening a USB board can reset it.</p>
+                    </div>
+                </details>
                 <div id="viewer-status" class="viewer-status" role="status"></div>
-                <p class="helper safety-note">Connect checks for other readers and requests an exclusive lock. Apps that ignore locks may not be detected. Opening a USB board can reset it.</p>
             </section>
             <section class="panel console-panel" aria-label="Serial console">
-                <div class="console-head"><div class="console-title"><h2>Serial console</h2><div class="console-meta" id="console-meta">Select a device to view its output</div></div><button id="pause-button" class="pause-button" aria-pressed="false">Pause Display</button></div>
+                <div class="console-head"><div class="console-title"><h2>Serial console</h2><div class="console-meta" id="console-meta">Select a device to view its output</div></div><div class="console-actions"><button id="follow-button" class="follow-button" aria-label="Follow live output" aria-pressed="true">Live</button><button id="pause-button" class="pause-button" aria-label="Pause Display" aria-pressed="false">Pause Display</button></div></div>
                 <div class="terminal"><div id="serial-data" aria-label="Serial output"></div><div id="console-empty" class="console-empty"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="4" y="6" width="32" height="27" rx="4"/><path d="m11 15 5 5-5 5m10 0h8"/></svg><div id="empty-title" class="empty-title">Your console is ready</div><div id="empty-help" class="empty-help">Choose a device and connect to see its serial output here.</div></div></div>
-                <div class="command-bar"><label for="command-input">Command <span id="command-target">· select a connected device</span></label><div class="command-row"><input id="command-input" type="text" placeholder="Enter a command…" autocomplete="off" spellcheck="false"><button id="send-button" class="primary" disabled>Send Command</button></div><div class="command-help">Sent to the selected connected device only when you press Send Command.</div></div>
+                <div class="command-bar"><label for="command-input">Command <span id="command-target">· select a connected device</span></label><div class="command-row"><input id="command-input" type="text" placeholder="Enter a command…" autocomplete="off" autocapitalize="none" enterkeyhint="done" spellcheck="false"><button id="send-button" class="primary" aria-label="Send Command" disabled>Send Command</button></div><div class="command-help">Sent to the selected connected device only when you press Send Command.</div></div>
             </section>
         </main>
         <footer class="app-footer"><div class="footer-stats"><span id="port-count" class="stat">Checking ports</span><span id="session-count" class="stat">0 connected</span></div><span id="reader-version"></span></footer>

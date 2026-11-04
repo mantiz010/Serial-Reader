@@ -8,6 +8,11 @@ Serial Reader **1.2.0** monitors USB serial devices, shows their names and conne
 - **Disconnect** closes the selected device and releases its serial handle.
 - **Pause Display / Resume Display** freezes or resumes the visible log. Reading and connection-status updates continue.
 - **Send Command** is enabled only for a connected selected device. Commands end with a newline.
+- **Follow live** returns the console to its newest line. Scrolling up keeps your reading position during refreshes.
+
+On phones, **Connection settings** expands the baud-rate and connection controls. The device selector stays visible while these settings are folded away, leaving more space for the console. Touch controls are at least 44 pixels high, and command input uses a 16-pixel font. The console adapts to short landscape and keyboard-sized views. Phone logs show time and message; desktop logs retain the full timestamp and device path.
+
+The mobile layout was updated on 4 November 2026. It is a frontend update; the backend remains 1.2.0. API reads have an eight-second timeout, and returning to the app refreshes its state. Hidden pages pause their polling. None of these actions opens or closes a serial port.
 
 Loading or refreshing the viewer never opens a port or sends a command. The viewer recognises connections already owned by Serial Reader. Lost devices are closed and reported; reconnecting requires another explicit Connect. Home Assistant shutdown closes the owned handles, and startup does not reopen them.
 
@@ -86,6 +91,7 @@ Connect/Disconnect/Command target one device. Legacy list-only requests retain t
 ```sh
 python3 tests/test_backend.py
 node tests/named-paths.cjs
+node tests/mobile-layout.cjs
 node tests/sidebar-live.cjs
 ```
 
